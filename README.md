@@ -76,6 +76,8 @@ Metrics endpoint will be available at e.g.:
 or  
 `http://localhost:9000/metrics` (if you set a custom port)
 
+The server is running on all network interfaces (0.0.0.0). Replace local host above as needed...
+
 ---
 
 ### Prometheus scrape config
