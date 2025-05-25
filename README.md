@@ -44,7 +44,7 @@ Each container is labeled by its name.
 
 1. **Clone this repository**:
     ```sh
-    git clone <your-repo-url>
+    git clone https://github.com/ttww/docker_metrics_exporter.git
     cd docker_metrics_exporter
     ```
 
