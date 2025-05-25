@@ -34,7 +34,9 @@ Each container is labeled by its name.
 
 ### Prerequisites
 
+- **For Rust: apt install build-essential
 - **Rust toolchain** ([Install via rustup](https://rustup.rs/))
+- **Relogin after Rust install or source the bash/sh profile...
 - **Docker** must be installed and in the `PATH`
 - Prometheus (for scraping, optional)
 
