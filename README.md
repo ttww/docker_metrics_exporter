@@ -80,13 +80,13 @@ or
 
 ### Prometheus scrape config
 
-Add this to your `prometheus.yml`:
+Add this to your `prometheus.yml` on your prometheus server:
 
 ```yaml
 scrape_configs:
   - job_name: 'docker-metrics'
     static_configs:
-      - targets: ['localhost:9187']
+      - targets: ['<your_host_or_ip>:9187']
 ```
 
 Change the port if you are running the exporter on a different port.
