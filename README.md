@@ -1,10 +1,9 @@
 
 # docker_metrics_exporter
 
-A lightweight [Prometheus](https://prometheus.io/) exporter for live Docker container statistics.
+A lightweight [Prometheus](https://prometheus.io/) exporter for live Docker container statistics, with optional InfluxDB export.
 
-This Rust-based exporter continuously streams container resource metrics from `docker stats`, parses them, and serves them via a `/metrics` HTTP endpoint for Prometheus to scrape.  
-Each container is labeled by its name.
+This Rust-based exporter streams container resource metrics from `docker stats` and either serves them via a `/metrics` HTTP endpoint for Prometheus **or** writes them to InfluxDB, depending on the `--target` argument.
 
 ---
 
@@ -12,9 +11,10 @@ Each container is labeled by its name.
 
 - **Live container stats:** CPU, memory, network, and block I/O per container
 - **Prometheus-compatible:** `/metrics` endpoint for easy scraping
+- **InfluxDB-compatible:** Direct write to InfluxDB (2.x or 1.x)
 - **Labels:** Each metric is labeled with the Docker container name
-- **Configurable port:** Set the HTTP port with `-p PORT` (default: 9187)
-- **Single-binary, no dependencies:** Runs anywhere Docker is available
+- **Configurable target:** `--target prometheus` (default) or `--target influxdb`
+- **Configurable HTTP/Influx port and host**
 
 ---
 
@@ -36,7 +36,7 @@ Each container is labeled by its name.
 
 - **Rust toolchain** ([Install via rustup](https://rustup.rs/))
 - **Docker** must be installed and in the `PATH`
-- Prometheus (for scraping, optional)
+- Prometheus and/or InfluxDB as desired
 
 ---
 
@@ -48,12 +48,14 @@ Each container is labeled by its name.
     cd docker_metrics_exporter
     ```
 
-2. **Build a release version (optimized binary):**
+2. **Add dependencies** (if needed, see below for Cargo.toml additions).
+
+3. **Build a release version:**
     ```sh
     cargo build --release
     ```
 
-3. **Copy the binary to `/usr/local/bin` for global use (may require sudo):**
+4. **Copy the binary to `/usr/local/bin` (may require sudo):**
     ```sh
     sudo cp target/release/docker_metrics_exporter /usr/local/bin/
     ```
@@ -64,21 +66,14 @@ Each container is labeled by its name.
 
 | Command                                             | Description                        |
 |-----------------------------------------------------|------------------------------------|
-| `docker_metrics_exporter`                           | Listen on port 9187 (default)      |
-| `docker_metrics_exporter -p 9000`                   | Listen on port 9000                |
-| `docker_metrics_exporter -p 12313`                  | Listen on port 12313               |
+| `docker_metrics_exporter`                           | Prometheus mode, port 9187         |
+| `docker_metrics_exporter --target prometheus -p 9000` | Prometheus, custom port 9000     |
+| `docker_metrics_exporter --target influxdb --host 127.0.0.1 --port 8086 --db metrics` | InfluxDB mode |
 | `docker_metrics_exporter -h`                        | Show help/usage                    |
-
-Metrics endpoint will be available at e.g.:  
-`http://localhost:9187/metrics`  
-or  
-`http://localhost:9000/metrics` (if you set a custom port)
 
 ---
 
 ### Prometheus scrape config
-
-Add this to your `prometheus.yml`:
 
 ```yaml
 scrape_configs:
@@ -87,55 +82,63 @@ scrape_configs:
       - targets: ['localhost:9187']
 ```
 
-Change the port if you are running the exporter on a different port.
+---
+
+### InfluxDB usage
+
+- **InfluxDB must be accessible from this exporter.**
+- Write-compatibility is for Influx 1.x and 2.x HTTP APIs.
+- The default measurement is `docker_stats`.
+- Adjust the database/organization name as required.
 
 ---
 
 ## Run as a systemd service
 
-Running the exporter as a systemd service ensures automatic startup and robust operation.
+1. **Create a dedicated user (optional, but recommended):**
+    ```sh
+    sudo useradd -r -s /bin/false docker-metrics
+    sudo usermod -aG docker docker-metrics
+    ```
 
-### 1. Create a systemd user/group
+2. **Create `/etc/systemd/system/docker_metrics_exporter.service`:**
+    ```ini
+    [Unit]
+    Description=Docker Metrics Exporter for Prometheus or InfluxDB
+    After=network.target docker.service
+    Requires=docker.service
 
-Create a dedicated user with limited permissions to run the exporter safely:
+    [Service]
+    Type=simple
+    ExecStart=/usr/local/bin/docker_metrics_exporter --target prometheus -p 9187
+    Restart=on-failure
+    User=docker-metrics
+    Group=docker-metrics
 
-```sh
-sudo useradd -r -s /bin/false docker-metrics
-sudo usermod -aG docker docker-metrics
-```
+    [Install]
+    WantedBy=multi-user.target
+    ```
+   - Change `ExecStart` as needed for your config.
 
-This user must belong to the `docker` group to run Docker commands.
+3. **Reload, enable, and start:**
+    ```sh
+    sudo systemctl daemon-reload
+    sudo systemctl enable docker_metrics_exporter
+    sudo systemctl start docker_metrics_exporter
+    sudo systemctl status docker_metrics_exporter
+    ```
 
-### 2. Create the systemd unit file
+---
 
-Create `/etc/systemd/system/docker_metrics_exporter.service` with the following content:
+## Cargo.toml additions
 
-```ini
-[Unit]
-Description=Docker Metrics Exporter for Prometheus
-After=network.target docker.service
-Requires=docker.service
-
-[Service]
-Type=simple
-ExecStart=/usr/local/bin/docker_metrics_exporter -p 9187
-Restart=on-failure
-User=docker-metrics
-Group=docker-metrics
-
-[Install]
-WantedBy=multi-user.target
-```
-
-### 3. Enable and start the service
-
-Reload systemd, enable the service at boot, and start it now:
-
-```sh
-sudo systemctl daemon-reload
-sudo systemctl enable docker_metrics_exporter
-sudo systemctl start docker_metrics_exporter
-sudo systemctl status docker_metrics_exporter
+```toml
+prometheus = "0.13"
+warp = "0.3"
+serde = { version = "1", features = ["derive"] }
+tokio = { version = "1", features = ["full"] }
+influxdb = { version = "0.7", features = ["derive", "reqwest-client"] }
+chrono = { version = "0.4", features = ["serde"] }
 ```
 
 ---
@@ -167,6 +170,5 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
-
 
 
