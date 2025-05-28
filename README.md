@@ -1,7 +1,7 @@
 
-# docker_metrics_exporter
+# docker_metrics_exporter for Prometheus and InfluxDB
 
-A lightweight [Prometheus](https://prometheus.io/) exporter for live Docker container statistics, with optional InfluxDB export.
+A lightweight [Prometheus](https://prometheus.io/) exporter for live Docker container statistics, with optional [InfluxDB](https://www.influxdata.com) export.
 
 This Rust-based exporter streams container resource metrics from `docker stats` and either serves them via a `/metrics` HTTP endpoint for Prometheus **or** writes them to InfluxDB, depending on the `--target` argument.
 
@@ -34,7 +34,9 @@ This Rust-based exporter streams container resource metrics from `docker stats` 
 
 ### Prerequisites
 
+- **For Rust**: apt install build-essential
 - **Rust toolchain** ([Install via rustup](https://rustup.rs/))
+- **Relogin** after Rust install or source the bash/sh profile...
 - **Docker** must be installed and in the `PATH`
 - Prometheus and/or InfluxDB as desired
 
@@ -44,7 +46,7 @@ This Rust-based exporter streams container resource metrics from `docker stats` 
 
 1. **Clone this repository**:
     ```sh
-    git clone <your-repo-url>
+    git clone https://github.com/ttww/docker_metrics_exporter.git
     cd docker_metrics_exporter
     ```
 
@@ -71,15 +73,22 @@ This Rust-based exporter streams container resource metrics from `docker stats` 
 | `docker_metrics_exporter --target influxdb --host 127.0.0.1 --port 8086 --db metrics` | InfluxDB mode |
 | `docker_metrics_exporter -h`                        | Show help/usage                    |
 
----
+Metrics endpoint will be available at e.g.:  
+`http://localhost:9187/metrics`  
+or  
+`http://localhost:9000/metrics` (if you set a custom port)
+
+The server is running on all network interfaces (0.0.0.0). Replace local host above as needed...
 
 ### Prometheus scrape config
+
+Add this to your `prometheus.yml` on your prometheus server:
 
 ```yaml
 scrape_configs:
   - job_name: 'docker-metrics'
     static_configs:
-      - targets: ['localhost:9187']
+      - targets: ['<your_host_or_ip>:9187']
 ```
 
 ---
