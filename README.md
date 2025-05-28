@@ -1,5 +1,5 @@
 
-# docker_metrics_exporter for Prometheus and InfluxDB
+# docker_metrics_exporter for <span style="color:orange">Prometheus</span> and <span style="color:orange">InfluxDB</span>
 
 A lightweight [Prometheus](https://prometheus.io/) exporter for live Docker container statistics, with optional [InfluxDB](https://www.influxdata.com) export.
 
